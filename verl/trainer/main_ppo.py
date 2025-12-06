@@ -27,8 +27,21 @@ def main(config):
 
 def run_ppo(config, compute_score=None):
     if not ray.is_initialized():
-        # this is for local ray cluster
-        ray.init(runtime_env={'env_vars': {'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN'}})
+        # Multi-node NCCL configuration for H100 cluster with InfiniBand
+        # Key settings based on HPC-X environment for cross-node communication
+        import os
+        ld_library_path = os.environ.get('LD_LIBRARY_PATH', '')
+        ray.init(runtime_env={'env_vars': {
+            'TOKENIZERS_PARALLELISM': 'true',
+            'NCCL_DEBUG': 'INFO',
+            'NCCL_IB_DISABLE': '0',  # Enable InfiniBand
+            'NCCL_SOCKET_IFNAME': 'ens7',  # Use correct network interface
+            'NCCL_IB_HCA': '^mlx5_0',  # Exclude mlx5_0 which may have issues
+            'NCCL_NET_GDR_LEVEL': '5',  # Enable GPU Direct RDMA
+            'NCCL_IB_GID_INDEX': '0',
+            'GLOO_SOCKET_IFNAME': 'ens7',
+            'LD_LIBRARY_PATH': ld_library_path,  # Pass HPC-X library paths
+        }})
 
     ray.get(main_task.remote(config, compute_score))
 
