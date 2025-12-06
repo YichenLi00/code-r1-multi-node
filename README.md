@@ -22,7 +22,7 @@ pip install wandb IPython matplotlib gpustat # utility
 
 > [!IMPORTANT]
 >
-> This branch is optimized for **multi-node training** (tested on 2×8 H100). For single-node setup, use `main` branch.
+> This branch is optimized for **multi-node training** (tested on 2×8 H100). For single-node setup, please check https://github.com/ganler/code-r1.
 
 ### Multi-Node Setup
 
