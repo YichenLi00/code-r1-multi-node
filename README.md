@@ -1,4 +1,4 @@
-# Code-R1: Reproducing R1 for Code with Reliable Rewards
+# Code-R1: Reproducing R1 for Code with Reliable Rewards (Multi-Node)
 
 This repository includes implementations to reproduce the R1 pipeline for code generation:
 
@@ -15,9 +15,36 @@ More results and findings to come...
 ```bash
 # For training
 pip install -e .
-pip install vllm==0.7.3
+pip install vllm==0.6.3
 pip install flash-attn --no-build-isolation
 pip install wandb IPython matplotlib gpustat # utility
+```
+
+> [!IMPORTANT]
+>
+> This branch is optimized for **multi-node training** (tested on 2×8 H100). For single-node setup, use `main` branch.
+
+### Multi-Node Setup
+
+For multi-node training, you need to:
+
+1. Ensure SSH passwordless login between nodes
+2. Sync the codebase to all nodes
+3. Install dependencies on all nodes
+
+```bash
+# Sync to remote node
+rsync -avz /home/ubuntu/code-r1/ <remote_ip>:/home/ubuntu/code-r1/
+
+# Install on remote node
+ssh <remote_ip> "cd /home/ubuntu/code-r1 && pip install -e . && pip install flash-attn --no-build-isolation"
+```
+
+Create hostfile at `~/hostfile.txt`:
+
+```bash
+<head_node_ip> slots=8
+<worker_node_ip> slots=8
 ```
 
 ### Sandboxing
@@ -52,15 +79,37 @@ To produce locally validated RL data:
 python examples/data_preprocess/coder1.py
 ```
 
-### Run!
+## Run!
+
+### Single-Node
 
 ```bash
 bash main_grpo.sh
 ```
 
+### Multi-Node
+
+For multi-node training (e.g., 2×8 H100):
+
+```bash
+# 1. Verify InfiniBand connectivity (optional but recommended)
+bash main_grpo_multinode.sh test
+
+# 2. Start training
+bash main_grpo_multinode.sh run
+```
+
+The multi-node script handles Ray cluster setup and NCCL configuration automatically.
+
 > [!NOTE]
 >
-> The script was optimized for single-node 8x H200 setup. You might need to customize the settings for your own workstation.
+> Key things to configure in `main_grpo_multinode.sh`:
+> * `HEAD_NODE_IP` and `WORKER_NODE_IP`: Your node IPs
+> * `GRAD_ACC_STEPS`: Reduced from 4 to 2 (doubled GPUs, same global batch size)
+>
+> For NCCL issues across nodes, check `verl/trainer/main_ppo.py` where we set `NCCL_SOCKET_IFNAME`, `NCCL_IB_DISABLE=0`, etc.
+
+For detailed multi-node debugging notes, see [multi_node.md](multi_node.md).
 
 ## Code-R1 Zero based on 7B models
 
